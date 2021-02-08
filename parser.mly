@@ -1,11 +1,9 @@
-// mostly taken from github.com/wenyuzhao/Lambda/blob/master/src/parser.mly
 %token LPAREN
 %token RPAREN
 %token <string> VAR
 %token DOT
 %token LAMBDA
 %token EOF
-%right LPAREN VAR DOT LAMBDA 
 
 %start <Lambda_expr.t> prog
 %%
@@ -14,10 +12,21 @@ prog:
   | e = expr; EOF   {e};
 
 expr:
-  | a = atom      {a}
-  | e = expr; a = atom {`Application (e,a)};
+  | x = atom    { x }
+  | x = abs     { x }
+  | x = app     { x }
+
+abs:
+  | LAMBDA; v = VAR; DOT; e = expr  { `Abstraction (v, e) }
+
+app:
+  | m = simple_app; n = abs      { `Application (m, n) }
+  | m = simple_app; n = atom     { `Application (m, n) }
+
+simple_app:
+  | a = atom                  { a }
+  | a = simple_app; b = atom  {`Application (a, b)}
 
 atom:
-  | LPAREN; e = expr; RPAREN        {e}
-  | v = VAR                         {`Variable v}
-  | LAMBDA; v = VAR; DOT; e = expr  {`Abstraction (v,e)}
+  | LPAREN; e = expr; RPAREN  { e }
+  | v = VAR                   { `Variable v }
