@@ -1,0 +1,10 @@
+(library
+  (name lambda_calc)
+  (libraries core)
+  (inline_tests)
+  (preprocess
+    (pps ppx_jane)))
+(menhir
+  (modules parser)
+)
+(ocamllex lexer)
