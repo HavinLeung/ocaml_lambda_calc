@@ -18,6 +18,7 @@ expr:
 
 abs:
   | LAMBDA; v = VAR; DOT; e = expr  { `Abstraction (v, e) }
+  | LAMBDA; DOT; e = expr           { `Abstraction ("", e) }
 
 app:
   | m = simple_app; n = abs      { `Application (m, n) }
