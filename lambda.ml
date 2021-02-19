@@ -48,17 +48,14 @@ let aoe {expr; is_debruijn} : t option =
   if is_debruijn then raise_s [%message "called aoe after to_debruijn"];
   let rec aoe :(Lambda_expr.t -> Lambda_expr.t option) = function
     | `Variable _ | `Abstraction _ -> None
+    | `Application (`Abstraction (var, body) as rator, rand) ->
+      (match aoe rand with
+       | Some rand -> Some (`Application (rator, rand))
+       | None -> Lambda_expr.substitute body var rand |> Option.return)
     | `Application (rator, rand) ->
-      (match rator with
-       | `Abstraction (var, body) ->
-         (match aoe rand with
-          | Some rand -> Some (`Application (rator, rand))
-          | None -> Lambda_expr.substitute body var rand |> Option.return)
-       | rator ->
-         (match aoe rator with
-          | Some rator -> `Application (rator, rand) |> Option.return
-          | None -> Option.map (aoe rand) ~f:(fun rand -> `Application (rator, rand)))
-      )
+        (match aoe rator with
+        | Some rator -> `Application (rator, rand) |> Option.return
+        | None -> Option.map (aoe rand) ~f:(fun rand -> `Application (rator, rand)))
   in
   Option.map (aoe expr) ~f:(fun expr -> {expr; is_debruijn})
 ;;

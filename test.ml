@@ -2,16 +2,18 @@ open Core
 open Lexer
 open Lexing
 
-let raise_position lexbuf =
+let position_sexp lexbuf =
   let {pos_fname; pos_lnum; pos_cnum; pos_bol;_} = lexbuf.lex_curr_p in
-  raise_s [%message (pos_fname : string) (pos_lnum : int) (pos_cnum : int) (pos_bol : int)]
+  [%message (pos_fname : string) (pos_lnum : int) (pos_cnum : int) (pos_bol : int)]
+;;
 
 let parse_with_error lexbuf =
   try Parser.prog Lexer.read lexbuf with
   | SyntaxError _ ->
-    raise_position lexbuf
+    raise_s (position_sexp lexbuf)
   | Parser.Error ->
-    raise_position lexbuf
+    raise_s (position_sexp lexbuf)
+;;
 
 let parse s =
   let lexbuf = Lexing.from_string s in
@@ -95,7 +97,7 @@ let%test_module _ = (module struct
       (\.((\.((\.((\.1) 1)) 1)) 1))
 
       (\mul.\two.mul two two) (\m.\n.\f.m(n f)) (\f.\x.f (f x))
-      (\f!!!!!!!.((\f!!.(\x!!!!.(f!! (f!! x!!!!)))) ((\f.(\x.(f (f x)))) f!!!!!!!)))
+      (\f.((\f.(\x.(f (f x)))) ((\f.(\x.(f (f x)))) f)))
       (\.((\.(\.(2 (2 1)))) ((\.(\.(2 (2 1)))) 1)))
 
       (\head.\tail.\cons.\zero.\two.(\succ.(\pred.(pred two)) (\n.(tail(n(\p.cons(succ(head p)) (head p))(cons zero zero))))) (\n.\f.\x.n f(f x))) (\l.l\x.\y.x) (\l.l\x.\y.y) (\h.\t.\s.s h t) (\f.\x.x) (\f.\x.f (f x)) f x
@@ -116,7 +118,7 @@ let%test_module _ = (module struct
     reduce_and_test exprs Lambda.nor 1000;
     [%expect {|
       (\head.\tail.\cons.\isNull.\nil.\zero.\succ.(\Y.\F.(\len.(len (cons zero (cons zero nil)) )) (Y F)) (\f.(\x.f(x x))(\x.f(x x))) (\f.\l.(isNull l) zero (succ (f(tail l))))) (\l.l(\x.\y.x)) (\l.l(\x.\y.y)) (\h.\t.\s.s h t) (\l.l\h.\t.\x.\y.y) (\s.\x.\y.x) (\f.\x.x) (\n.\f.\x.n f(f x))
-      (\f!!!!!!!!!!!!!!!.(\x!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!.(f!!!!!!!!!!!!!!! (f!!!!!!!!!!!!!!! x!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!))))
+      (\f.(\x.(f (f x))))
       (\.(\.(2 (2 1))))
 
       \x.(\y.x)x
@@ -132,7 +134,7 @@ let%test_module _ = (module struct
       (\.1)
 
       (\mul.\two.mul two two) (\m.\n.\f.m(n f)) (\f.\x.f (f x))
-      (\f!!!!!!!.(\x!!!!!.(f!!!!!!! (f!!!!!!! (f!!!!!!! (f!!!!!!! x!!!!!))))))
+      (\f.(\x.(f (f (f (f x))))))
       (\.(\.(2 (2 (2 (2 1))))))
 
       (\head.\tail.\cons.\zero.\two.(\succ.(\pred.(pred two)) (\n.(tail(n(\p.cons(succ(head p)) (head p))(cons zero zero))))) (\n.\f.\x.n f(f x))) (\l.l\x.\y.x) (\l.l\x.\y.y) (\h.\t.\s.s h t) (\f.\x.x) (\f.\x.f (f x)) f x

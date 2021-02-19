@@ -43,11 +43,11 @@ let rec substitute (t:t) (x:string) (sub:t) : t =
     (match var with
     | _ when x = var -> self
     | var -> (
-      match Set.mem (freevars body) var with
+      match Set.mem (freevars sub) var with
       | false -> `Abstraction (var, substitute body x sub)
-      | true -> 
+      | true ->
         let z = ref var in
-        while Set.mem (freevars body) !z do
+        while Set.mem (freevars sub) !z do
           z := (!z ^ "!");
         done;
         let new_body = substitute body var (`Variable !z) in
