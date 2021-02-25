@@ -1,0 +1,5 @@
+(executable
+  (name lambda_cli)
+  (libraries core lambda_calc)
+  (preprocess (pps ppx_jane))
+)
