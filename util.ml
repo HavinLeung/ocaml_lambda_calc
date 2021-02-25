@@ -14,7 +14,7 @@ let parse_exn s = parse s |> Or_error.ok_exn
 
 let parse_reduce_print
     (s : string)
-    (f : Lambda.t -> int -> Lambda.t)
+    (f : 'a Lambda.t -> int -> 'a Lambda.t)
     (steps : int) : unit Or_error.t =
   parse s |> Or_error.map ~f:(fun l ->
       print_endline "Parsed:";

@@ -1,21 +1,19 @@
 open! Core
 
-type t = {
-  expr : Lambda_expr.t;
-  is_debruijn : bool
-}
+type reg
+type debruijn
+type 'a t = Lambda_expr.t
 
-let create (expr: Lambda_expr.t) = {expr;is_debruijn=false}
+let create = Fn.id
 
 let parse s =
   let lexbuf = Lexing.from_string s in
   Parser.prog Lexer.read lexbuf
 ;;
 
-let print {expr;_} = Lambda_expr.print expr
+let print = Lambda_expr.print
 
-let to_debruijn ({expr; is_debruijn} : t) = 
-  if is_debruijn then raise_s [%message "already debruijn"];
+let to_debruijn (expr: reg t) : debruijn t =
   let rec to_debruijn (expr: Lambda_expr.t) (map : int String.Map.t) = 
     match expr with
     | `Variable x ->
@@ -29,11 +27,10 @@ let to_debruijn ({expr; is_debruijn} : t) =
     | `Application (n,m) ->
       `Application ((to_debruijn n map), (to_debruijn m map))
   in
-  {expr=(to_debruijn expr String.Map.empty); is_debruijn=true}
+  to_debruijn expr String.Map.empty
 ;;
 
-let reduce t (steps: int) f : t =
-  if t.is_debruijn then raise_s [%message "called aoe after to_debruijn"];
+let reduce (t: reg t) (steps: int) f : reg t =
   let rec repeat t steps =
     if steps <= 0 then t
     else (match f t with
@@ -44,8 +41,7 @@ let reduce t (steps: int) f : t =
   repeat t steps
 ;;
 
-let aoe {expr; is_debruijn} : t option =
-  if is_debruijn then raise_s [%message "called aoe after to_debruijn"];
+let aoe (expr : reg t) : (reg t) option =
   let rec aoe :(Lambda_expr.t -> Lambda_expr.t option) = function
     | `Variable _ | `Abstraction _ -> None
     | `Application (`Abstraction (var, body) as rator, rand) ->
@@ -57,15 +53,14 @@ let aoe {expr; is_debruijn} : t option =
         | Some rator -> `Application (rator, rand) |> Option.return
         | None -> Option.map (aoe rand) ~f:(fun rand -> `Application (rator, rand)))
   in
-  Option.map (aoe expr) ~f:(fun expr -> {expr; is_debruijn})
+  aoe expr
 ;;
 
-let aoe t (steps: int) : t =
+let aoe t (steps: int) : reg t =
   reduce t steps aoe
 ;;
 
-let nor {expr; is_debruijn} : t option =
-  if is_debruijn then raise_s [%message "called nor after to_debruijn"];
+let nor (expr : reg t) : (reg t) option =
   let rec nor : (Lambda_expr.t -> Lambda_expr.t option) = function
     | `Variable _ -> None
     | `Abstraction (x, m) -> Option.map (nor m) ~f:(fun m' -> `Abstraction (x, m'))
@@ -76,13 +71,12 @@ let nor {expr; is_debruijn} : t option =
        | None -> Option.map (nor m2) ~f:(fun m2' -> `Application (m1, m2'))
       )
   in
-  Option.map (nor expr) ~f:(fun expr -> {expr; is_debruijn})
+  nor expr
 ;;
 
 let nor t steps = reduce t steps nor
 
-let eta {expr; is_debruijn} : t option =
-  if is_debruijn then raise_s [%message "called eta after to_debruijn"];
+let eta (expr : reg t) : (reg t) option  =
   let rec eta : (Lambda_expr.t -> Lambda_expr.t option) = function
     | `Variable _ -> None
     | `Abstraction (x, `Application (m',`Variable y)) when y = x && not (Set.mem (Lambda_expr.freevars m') x ) -> Some m'
@@ -93,7 +87,7 @@ let eta {expr; is_debruijn} : t option =
        | None -> Option.map (eta m2) ~f:(fun m2' -> `Application (m1, m2'))
       )
   in
-  Option.map (eta expr) ~f:(fun expr -> {expr; is_debruijn})
+  eta expr
 ;;
 
 let eta t steps = reduce t steps eta
